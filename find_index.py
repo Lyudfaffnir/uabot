@@ -34,10 +34,11 @@ def get_table_on_page(num):
         html_text = response.text
 
         soup = BeautifulSoup(html_text, 'html.parser')
-        # table = soup.find("div", class_="content")
-        x = soup.title.string
+        table = soup.find("div", class_="nv-content-wrap entry-content")
+        x = table.table.tbody.prettify()
+        print(x)
 
-        return x
+        return 'popa'
 
 
 print(get_table_on_page(9))
