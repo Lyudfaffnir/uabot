@@ -24,23 +24,26 @@ from bs4 import BeautifulSoup
 #        return num
 
 
-def get_table_on_page(num):
-    if num == 0:
-        return "Index not found, please enter the streetname using the cyrillic alphabet"
-    else:
-        # kyiv_index_url = "http://indexua.net/kievzipindex/" + str(num) + "/"
-        kyiv_index_url = "https://tkiev.com/pochtovye-indeksy-kieva.php"
-        response = requests.get(kyiv_index_url)
-        html_text = response.text
+def get_table_on_page():
+    # kyiv_index_url = "http://indexua.net/kievzipindex/" + str(num) + "/"
+    kyiv_index_url = "https://tkiev.com/pochtovye-indeksy-kieva.php"
+    response = requests.get(kyiv_index_url)
+    html_text = response.text
 
-        soup = BeautifulSoup(html_text, 'html.parser')
-        table = soup.find("div", class_="nv-content-wrap entry-content")
-        x = table.table.tbody.prettify()
-        print(x)
+    soup = BeautifulSoup(html_text, 'html.parser')
+    area = soup.find("div", class_="nv-content-wrap entry-content")
+    info = area.table.tbody.find_all("tr")
+    dictionary_info = {}
+    for i in info:
+        address = i.td.string
+        address = str(address).strip()
+        index = i.td.findNext("td")
+        if index:
+            index = str(index.string).strip()
+        else:
+            index = ""
+        dictionary_info.update({address: index})
+    return dictionary_info
 
-        return 'popa'
 
-
-print(get_table_on_page(9))
-#get_table_on_page(example1)
-#get_table_on_page(example2)
+print(get_table_on_page())
