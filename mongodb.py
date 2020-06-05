@@ -2,13 +2,20 @@ import personal_data
 from pymongo import MongoClient
 
 
-def add_dictionary(dictionary):
+def create_connection():
     connection_string = "mongodb+srv://" + str(personal_data.get_login()) + ":" + str(personal_data.get_password()) + "@petprojectsx-c0xb2.mongodb.net/<dbname>?retryWrites=true&w=majority"
     client = MongoClient(connection_string)
     db = client.uabot
+    return db
+
+
+def insert_dictionary(dictionary):
+    db = create_connection()
     indexxxes = db.indexes
     indexxxes.insert_one(dictionary)
-    return 0
+    return "OK"
 
 
-print(add_dictionary({"zhil": "faust"}))
+def receive_backup():
+    db = create_connection()
+    return db.indexes

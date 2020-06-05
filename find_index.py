@@ -1,5 +1,4 @@
 import requests
-import mongodb
 from bs4 import BeautifulSoup
 
 # THIS FUNCTION IS NOT USED ANYMORE
@@ -45,6 +44,3 @@ def get_table_on_page():
             index = ""
         dictionary_info.update({"address": address, "index": index})
     return dictionary_info
-
-
-mongodb.add_dictionary(get_table_on_page())
