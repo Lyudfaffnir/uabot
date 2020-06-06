@@ -34,6 +34,7 @@ def get_table_on_page():
     area = soup.find("div", class_="nv-content-wrap entry-content")
     info = area.table.tbody.find_all("tr")
     dictionary_info = {}
+    increment = 0
     for i in info:
         address = i.td.string
         address = str(address).strip()
@@ -42,5 +43,17 @@ def get_table_on_page():
             index = str(index.string).strip()
         else:
             index = ""
-        dictionary_info.update({"address": address, "index": index})
+        id = "id" + str(increment)
+        dictionary_info.update({id: {"address": address, "index": index}})
+        increment = increment + 1
     return dictionary_info
+
+
+def get_data_from_dictionary(dictionary, request):
+    new_string = ""
+    for i in dictionary:
+        address = dictionary.get(i).get("address")
+        index = dictionary.get(i).get("index")
+        if request.upper() in str(address.upper()):
+            new_string += f"\n{address}: {index}"
+    return new_string
