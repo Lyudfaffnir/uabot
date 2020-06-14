@@ -24,14 +24,14 @@ from bs4 import BeautifulSoup
 #        return num
 
 
-def get_table_on_page():
+def parse_kyiv_addresses():
     # kyiv_index_url = "http://indexua.net/kievzipindex/" + str(num) + "/"
     kyiv_index_url = "https://tkiev.com/pochtovye-indeksy-kieva.php"
     response = requests.get(kyiv_index_url)
     html_text = response.text
 
     soup = BeautifulSoup(html_text, 'html.parser')
-    area = soup.find("div", class_="nv-content-wrap entry-content")
+    area = soup.find("div", class_="theiaPostSlider_preloadedSlide")
     info = area.table.tbody.find_all("tr")
     dictionary_info = {}
     increment = 0
@@ -41,10 +41,11 @@ def get_table_on_page():
         index = i.td.findNext("td")
         if index:
             index = str(index.string).strip()
+            index = "0" + index
         else:
             index = ""
-        id = "id" + str(increment)
-        dictionary_info.update({id: {"address": address, "index": index}})
+        dickid = "id" + str(increment)
+        dictionary_info.update({dickid: {"address": address, "index": index, "city": "Kyiv"}})
         increment = increment + 1
     return dictionary_info
 
