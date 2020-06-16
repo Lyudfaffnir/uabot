@@ -1,6 +1,6 @@
 import personal_data
 from pymongo import MongoClient
-import find_index
+import one_time_parsers
 
 
 def receive_database():
@@ -15,6 +15,8 @@ def insert_dictionary(dictionary):
     index_data = db.index_data
     i = 1
     for x in dictionary:
+        if i == len(dictionary) + 1:
+            break
         this_id = "id" + str(i)
         item = dictionary[this_id]
         address = item["address"]
@@ -26,13 +28,17 @@ def insert_dictionary(dictionary):
     return "OK"
 
 
-def receive_backup():
+def get_our_index(user_input):
+    print(user_input)
     db = receive_database()
     cursor = db.index_data.find({})
+    addresses_i_found = ""
     for document in cursor:
-        print(document)
-    return cursor
+        address = str(document['address'])
+        # print(address.upper())
+        # print(user_input.upper())
+        index = str(document["index"])
+        if user_input.upper() in address.upper():
+            addresses_i_found += f"\n{address}: {index}"
+    return str(addresses_i_found)
 
-
-insert_dictionary(find_index.parse_kyiv_addresses())
-receive_backup()
