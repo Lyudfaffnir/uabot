@@ -1,6 +1,10 @@
 import requests
 from bs4 import BeautifulSoup
 
+# THIS DOCUMENT CONTAINS PARSERS WHICH ARE USED ONE TIME
+# TO RECEIVE THE DATA FROM WEBSITE AND ADD IT TO THE MONGODB
+
+
 # THIS FUNCTION IS NOT USED ANYMORE
 # def find_the_page(street):
 #    finder = street[0]
@@ -24,8 +28,8 @@ from bs4 import BeautifulSoup
 #        return num
 
 
+# KYIV
 def parse_kyiv_addresses():
-    # kyiv_index_url = "http://indexua.net/kievzipindex/" + str(num) + "/"
     kyiv_index_url = "https://tkiev.com/pochtovye-indeksy-kieva.php"
     response = requests.get(kyiv_index_url)
     html_text = response.text
@@ -50,6 +54,9 @@ def parse_kyiv_addresses():
     return dictionary_info
 
 
+# ======== FIND INDEX BY ADDRESS IN DICTIONARY =====
+# This function is not used anymore. Was used previously, when the data is not on the MongoDB
+# and therefore each time as the user requested data it was parsed again. Was removed due to insecurity.
 def get_data_from_dictionary(dictionary, request):
     new_string = ""
     for i in dictionary:
