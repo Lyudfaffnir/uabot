@@ -38,10 +38,10 @@ def insert_dictionary(dictionary):
 # This function follows through the index data collection and receives string
 # Which contains all the indexes that corresponds to the following request
 # TODO: Alternative to City-Func: Add the city argument to output the info about single city
-def get_our_index(user_input):
+def get_our_index(user_input, city):
     print(user_input)
     db = receive_database()
-    cursor = db.index_data.find({})
+    cursor = db.index_data.find({"city": city})
     addresses_i_found = ""
     for document in cursor:
         address = str(document['address'])
@@ -49,4 +49,3 @@ def get_our_index(user_input):
         if user_input.upper() in address.upper():
             addresses_i_found += f"\n{address}: {index}"
     return str(addresses_i_found)
-
