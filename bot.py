@@ -1,7 +1,7 @@
 import logging
 import personal_data
 from mongodb import get_our_index
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackQueryHandler
 
 updater = Updater(token=personal_data.token, use_context=True)
@@ -26,7 +26,7 @@ def button(update, context):
     query.answer()
     global city
     city = str(query.data)
-    query.edit_message_text(text="Вы выбрали город {}".format(query.data))
+    query.edit_message_text(text="Спасибо! \nТеперь просто пришлите мне название Вашей улицы и я выдам всё что найду.")
 
 
 # ========= TEST ECHO FUNCTION ===========
@@ -47,10 +47,17 @@ def search_for_index_in_mongo(update, context):
     user_input = update.message.text
     global city
     user_city = city
-    our_indexes = get_our_index(user_input, user_city)
-    if our_indexes == "":
-        our_indexes = personal_data.nothing_found_string
-    context.bot.send_message(chat_id=update.effective_chat.id, text=our_indexes)
+    reply_string = ""
+    if user_city == "":
+        reply_string = "Вы не выбрали город :( Пожалуйста, введите команду /city"
+    else:
+        our_indexes = get_our_index(user_input, user_city)
+        if our_indexes == {}:
+            reply_string = personal_data.nothing_found_string
+        else:
+            for count, (key, value) in enumerate(our_indexes.items(), 1):
+                reply_string += "\n<i>" + str(key) + "</i>: <b>" + str(value) + "</b>"
+    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Город: {city}\n" + reply_string, parse_mode=ParseMode.HTML)
 
 # ======= HELP FUNCTION =======
 # TODO: Add the help function as it is required by Telegram Docs
@@ -63,10 +70,13 @@ def search_for_index_in_mongo(update, context):
 start_handler = CommandHandler('start', start)
 dispatcher.add_handler(start_handler)
 
+choose_city_handler = CommandHandler('city', start)
+dispatcher.add_handler(choose_city_handler)
+
 updater.dispatcher.add_handler(CallbackQueryHandler(button))
 
-kyiv_index_handler = MessageHandler(Filters.text & (~Filters.command), search_for_index_in_mongo)
-dispatcher.add_handler(kyiv_index_handler)
+search_index_handler = MessageHandler(Filters.text & (~Filters.command), search_for_index_in_mongo)
+dispatcher.add_handler(search_index_handler)
 
 # echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
 # dispatcher.add_handler(echo_handler)
