@@ -1,5 +1,6 @@
 import logging
 import personal_data
+import emojis
 from mongodb import get_our_index
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackQueryHandler
@@ -59,8 +60,11 @@ def search_for_index_in_mongo(update, context):
                 reply_string += "\n<i>" + str(key) + "</i>: <b>" + str(value) + "</b>"
     context.bot.send_message(chat_id=update.effective_chat.id, text=f"Город: {city}\n" + reply_string, parse_mode=ParseMode.HTML)
 
+
 # ======= HELP FUNCTION =======
 # TODO: Add the help function as it is required by Telegram Docs
+def help_command(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text=f"{emojis.encode(':flushed:')} Тестовый эмодзи тестовой функции", parse_mode=ParseMode.HTML)
 
 
 # =========== OUR HANDLERS ==============
@@ -74,6 +78,8 @@ choose_city_handler = CommandHandler('city', start)
 dispatcher.add_handler(choose_city_handler)
 
 updater.dispatcher.add_handler(CallbackQueryHandler(button))
+
+updater.dispatcher.add_handler(CommandHandler('help', help_command))
 
 search_index_handler = MessageHandler(Filters.text & (~Filters.command), search_for_index_in_mongo)
 dispatcher.add_handler(search_index_handler)
