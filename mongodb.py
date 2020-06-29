@@ -1,13 +1,13 @@
 import personal_data
 from pymongo import MongoClient
-import one_time_parsers
 
 
 # ======= BASIC ACCESS DATABASE ======
 # This function is used in every database query, as it follows to our Uabot DataBase
 # and returns the MongoDB object, through which we can follow
 def receive_database():
-    connection_string = "mongodb+srv://" + str(personal_data.get_login()) + ":" + str(personal_data.get_password()) + "@petprojectsx-c0xb2.mongodb.net/<dbname>?retryWrites=true&w=majority"
+    connection_string = "mongodb+srv://" + str(personal_data.get_login()) + ":" + str(personal_data.get_password()) +\
+                        "@petprojectsx-c0xb2.mongodb.net/<dbname>?retryWrites=true&w=majority"
     client = MongoClient(connection_string)
     db = client.uabot
     return db
@@ -15,7 +15,6 @@ def receive_database():
 
 # ====== ADD COLLECTION TO MONGODB ======
 # Add the dictionary, that is added as an argument to index_data collection.
-# TODO: City-Func: Add the city argument to add the information about each city to the different collection
 def insert_dictionary(dictionary):
     db = receive_database()
     index_data = db.index_data
@@ -28,8 +27,8 @@ def insert_dictionary(dictionary):
         address = item["address"]
         index = item["index"]
         city = item['city']
-        itemdictionary = {"address": address, "index": index, "city": city}
-        index_data.insert_one(itemdictionary)
+        item_dictionary = {"address": address, "index": index, "city": city}
+        index_data.insert_one(item_dictionary)
         i += 1
     return "OK"
 
