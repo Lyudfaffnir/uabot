@@ -6,6 +6,7 @@ from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, Callb
 
 # Global variables
 current_city = ""
+alphabet = "Cyrillic"
 
 # Basic logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -14,12 +15,13 @@ logger = logging.getLogger(__name__)
 
 # Interaction with Mongo Functions
 # TODO: Needs to be separated in the future
+# TODO: Should show no more than 10 cities and footer interaction
 def construct_cities_list():
     cities_list = mongo_receive_cities()
     keyboard = []
-    for city_title in cities_list:
-        name = str(city_title)
-        keyboard.append([InlineKeyboardButton(name, callback_data=name)])
+    for count, (key, value) in enumerate(cities_list.items(), 1):
+        if alphabet == 'Cyrillic':
+            keyboard.append([InlineKeyboardButton(str(key), callback_data=str(key))])
     return keyboard
 
 
@@ -32,7 +34,8 @@ def get_index(user_input, user_city):
         if our_indexes == {}:
             reply_string = personal_data.nothing_found_string
         else:
-            reply_string += personal_data.bingo + f"Город: {city_command}\n"
+            global current_city
+            reply_string += personal_data.bingo + f"Город: {current_city}\n"
             for count, (key, value) in enumerate(our_indexes.items(), 1):
                 reply_string += "\n<i>" + str(key) + "</i>: <b>" + str(value) + "</b>"
     return reply_string
@@ -66,10 +69,11 @@ def button_command(update, context):
 # text_handler
 # By default needs to search for index by user input
 def index_command(update, context):
-    user_input = update.message.text
+    user_input = str(update.message.text)
     global current_city
-    user_city = current_city
+    user_city = str(current_city)
     reply_string = get_index(user_input, user_city)
+    print(reply_string)
     context.bot.send_message(chat_id=update.effective_chat.id, text=reply_string, parse_mode=ParseMode.HTML)
 
 
@@ -78,6 +82,12 @@ def index_command(update, context):
 def help_command(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.help_string,
                              parse_mode=ParseMode.HTML)
+
+
+# "/find_city <user input>" handler
+# TODO: Create search by city
+def find_city_command(update, context):
+    pass
 
 
 # ==== MAIN METHOD ====

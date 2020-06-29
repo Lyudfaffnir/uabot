@@ -36,12 +36,27 @@ def change_city_name_to_cyrillic():
     return "ОК"
 
 
+def add_latin_name():
+    db = mongo_get_db()
+    index_data = db.index_data
+    index_data.update_many({'city': 'Бортничи'}, {"$set": {'city_latina': 'Bortnichi'}},)
+    return "ОК"
+
+
 def receive_bortnichi():
     db = mongo_get_db()
+    index_data = db.index_data
     cursor = db.index_data.find({'address': {"$regex": "Бортничи"}})
     for doc in cursor:
-        print(doc)
-    pass
+        unique_id = doc["_id"]
+        string = doc['address']
+        new_string = string[:-9]
+
+        index_data.update_one({'_id': unique_id}, {"$set": {'address': new_string}})
+        pass
 
 
-receive_bortnichi()
+def delete_none_index():
+    db = mongo_get_db()
+    index_data = db.index_data
+    index_data.delete_many({'index': '0None'})

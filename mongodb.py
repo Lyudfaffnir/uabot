@@ -17,7 +17,7 @@ def mongo_get_db():
 def mongo_get_index(user_input, city):
     print(user_input)
     db = mongo_get_db()
-    cursor = db.index_data.find({"city": city})
+    cursor = db.index_data.find({"city": str(city)})
     addresses_i_found = {}
     for document in cursor:
         address = str(document['address'])
@@ -30,5 +30,12 @@ def mongo_get_index(user_input, city):
 # Get the values of "city" field
 def mongo_receive_cities():
     db = mongo_get_db()
-    cities_list = db.index_data.distinct("city")
-    return cities_list
+    city_cyrillic = db.index_data.distinct("city")
+    city_latina = db.index_data.distinct("city_latina")
+    dictionary = {}
+    iterator = 0
+    for i in city_cyrillic:
+        j = city_latina[iterator]
+        dictionary.update({i: j})
+        iterator += 1
+    return dictionary
