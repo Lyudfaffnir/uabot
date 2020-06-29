@@ -47,3 +47,10 @@ def get_our_index(user_input, city):
         if user_input.upper() in address.upper():
             addresses_i_found.update({address: index})
     return addresses_i_found
+
+
+# Shall be used to generate the dynamic inline query
+def receive_supported_cities():
+    db = receive_database()
+    cities_list = db.index_data.distinct("city")
+    return cities_list
