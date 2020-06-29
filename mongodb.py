@@ -32,23 +32,3 @@ def mongo_receive_cities():
     db = mongo_get_db()
     cities_list = db.index_data.distinct("city")
     return cities_list
-
-
-# ==== ONE-TIME FUNCTION ====
-# MUST BE USED ONLY ONCE
-def one_time_insert_dictionary(dictionary):
-    db = mongo_get_db()
-    index_data = db.index_data
-    i = 1
-    for x in dictionary:
-        if i == len(dictionary) + 1:
-            break
-        this_id = "id" + str(i)
-        item = dictionary[this_id]
-        address = item["address"]
-        index = item["index"]
-        city = item['city']
-        item_dictionary = {"address": address, "index": index, "city": city}
-        index_data.insert_one(item_dictionary)
-        i += 1
-    return "OK"
