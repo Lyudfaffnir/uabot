@@ -1,11 +1,11 @@
 import logging
 import personal_data
-from mongodb import get_our_index, receive_supported_cities
+from mongodb import mongo_get_index, mongo_receive_cities
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackQueryHandler
 
 # Global variables
-city = ""
+current_city = ""
 
 # Basic logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # Interaction with Mongo Functions
 # TODO: Needs to be separated in the future
 def construct_cities_list():
-    cities_list = receive_supported_cities()
+    cities_list = mongo_receive_cities()
     keyboard = []
     for city_title in cities_list:
         name = str(city_title)
@@ -23,81 +23,81 @@ def construct_cities_list():
     return keyboard
 
 
-# ====== BOT START FUNCTION =====
-# Should answer back with general specified information, such as "city" and "language"
-# and the bot should set its settings depending on customer's answer. At the moment
-# just response with the pre-generated text
-# TODO: Set the dynamic inline keyboard button
-def start(update, context):
+def get_index(user_input, user_city):
+    reply_string = ""
+    if user_city == "":
+        reply_string = personal_data.city_has_not_been_chosen
+    else:
+        our_indexes = mongo_get_index(user_input, user_city)
+        if our_indexes == {}:
+            reply_string = personal_data.nothing_found_string
+        else:
+            reply_string += personal_data.bingo + f"Город: {city_command}\n"
+            for count, (key, value) in enumerate(our_indexes.items(), 1):
+                reply_string += "\n<i>" + str(key) + "</i>: <b>" + str(value) + "</b>"
+    return reply_string
+
+
+# ==== Command Handlers ====
+# "/start" handler
+def start_command(update, context):
     reply_markup = InlineKeyboardMarkup(construct_cities_list())
     context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.start_string,
                              reply_markup=reply_markup)
 
 
-def city(update, context):
+# "/city" handler
+def city_command(update, context):
     reply_markup = InlineKeyboardMarkup(construct_cities_list())
     context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.choose_city_string,
                              reply_markup=reply_markup)
 
 
-def button(update, context):
+# inline query handler
+# By default chooses the city
+def button_command(update, context):
     query = update.callback_query
     query.answer()
-    global city
-    city = str(query.data)
+    global current_city
+    current_city = str(query.data)
     query.edit_message_text(text=personal_data.city_is_chosen)
 
 
-# ====== DATABASE QUERY FUNCTION =========
-# All the database-related functions can be found on the file mongodb.py. At the moment we have
-# single collection with a single city, through which the query follows.
-def text_handler_function(update, context):
+# text_handler
+# By default needs to search for index by user input
+def index_command(update, context):
     user_input = update.message.text
-    global city
-    user_city = city
-    # Here the search begins
-    reply_string = ""
-    if user_city == "":
-        reply_string = personal_data.city_has_not_been_chosen
-    else:
-        our_indexes = get_our_index(user_input, user_city)
-        if our_indexes == {}:
-            reply_string = personal_data.nothing_found_string
-        else:
-            reply_string += personal_data.bingo + f"Город: {city}\n"
-            for count, (key, value) in enumerate(our_indexes.items(), 1):
-                reply_string += "\n<i>" + str(key) + "</i>: <b>" + str(value) + "</b>"
-    # Until here
+    global current_city
+    user_city = current_city
+    reply_string = get_index(user_input, user_city)
     context.bot.send_message(chat_id=update.effective_chat.id, text=reply_string, parse_mode=ParseMode.HTML)
 
 
-# ======= HELP FUNCTION =======
+# "/help" handler
 # Is a requirement of Telegram API
 def help_command(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.help_string,
                              parse_mode=ParseMode.HTML)
 
 
-# =========== MAIN METHOD ==============
-# Contains all the handlers and basic bot settings. Function is required by the official documents.
-# Handlers are added in the same way they are written in the list of
-# functions that is shown above
+# ==== MAIN METHOD ====
+# Contains Command Handlers
 def main():
     # Create updater
     updater = Updater(token=personal_data.token, use_context=True)
     dispatcher = updater.dispatcher
     # "/start" command
-    start_handler = CommandHandler('start', start)
+    start_handler = CommandHandler('start', start_command)
     dispatcher.add_handler(start_handler)
     # "/city" command
-    choose_city_handler = CommandHandler('city', city)
+    choose_city_handler = CommandHandler('city', city_command)
     dispatcher.add_handler(choose_city_handler)
     # Here we receive the response from the inline query
-    updater.dispatcher.add_handler(CallbackQueryHandler(button))
+    updater.dispatcher.add_handler(CallbackQueryHandler(button_command))
     # "/help" command
     updater.dispatcher.add_handler(CommandHandler('help', help_command))
     # How we handle each other text received
-    text_handler = MessageHandler(Filters.text & (~Filters.command), text_handler_function)
+    text_handler = MessageHandler(Filters.text & (~Filters.command), index_command)
     dispatcher.add_handler(text_handler)
 
     updater.start_polling()
