@@ -2,10 +2,8 @@ import personal_data
 from pymongo import MongoClient
 
 
-# ======= BASIC ACCESS DATABASE ======
-# This function is used in every database query, as it follows to our Uabot DataBase
-# and returns the MongoDB object, through which we can follow
-def receive_database():
+# Basic MongoDB access
+def mongo_get_db():
     connection_string = "mongodb+srv://" + str(personal_data.get_login()) + ":" + str(personal_data.get_password()) +\
                         "@petprojectsx-c0xb2.mongodb.net/<dbname>?retryWrites=true&w=majority"
     client = MongoClient(connection_string)
@@ -13,10 +11,33 @@ def receive_database():
     return db
 
 
-# ====== ADD COLLECTION TO MONGODB ======
-# Add the dictionary, that is added as an argument to index_data collection.
-def insert_dictionary(dictionary):
-    db = receive_database()
+# ==== MONGO INTERACTION WITH BOT ====
+
+# Searches index by input
+def mongo_get_index(user_input, city):
+    print(user_input)
+    db = mongo_get_db()
+    cursor = db.index_data.find({"city": city})
+    addresses_i_found = {}
+    for document in cursor:
+        address = str(document['address'])
+        index = str(document["index"])
+        if user_input.upper() in address.upper():
+            addresses_i_found.update({address: index})
+    return addresses_i_found
+
+
+# Get the values of "city" field
+def mongo_receive_cities():
+    db = mongo_get_db()
+    cities_list = db.index_data.distinct("city")
+    return cities_list
+
+
+# ==== ONE-TIME FUNCTION ====
+# MUST BE USED ONLY ONCE
+def one_time_insert_dictionary(dictionary):
+    db = mongo_get_db()
     index_data = db.index_data
     i = 1
     for x in dictionary:
@@ -31,26 +52,3 @@ def insert_dictionary(dictionary):
         index_data.insert_one(item_dictionary)
         i += 1
     return "OK"
-
-
-# ============ FIND THE INDEX IN THE COLLECTION BY REQUEST ======
-# This function follows through the index data collection and receives string
-# Which contains all the indexes that corresponds to the following request
-def get_our_index(user_input, city):
-    print(user_input)
-    db = receive_database()
-    cursor = db.index_data.find({"city": city})
-    addresses_i_found = {}
-    for document in cursor:
-        address = str(document['address'])
-        index = str(document["index"])
-        if user_input.upper() in address.upper():
-            addresses_i_found.update({address: index})
-    return addresses_i_found
-
-
-# Shall be used to generate the dynamic inline query
-def receive_supported_cities():
-    db = receive_database()
-    cities_list = db.index_data.distinct("city")
-    return cities_list
