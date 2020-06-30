@@ -16,26 +16,33 @@ logger = logging.getLogger(__name__)
 
 # Interaction with Mongo Functions
 # TODO: Needs to be separated in the future
-# TODO: Should show no more than 10 cities and footer interaction
 def construct_cities_list(page_num):
     cities_list = mongo_receive_cities()
     keyboard = []
     list_len = len(cities_list)
-    buttons_per_page = 8
-    if list_len < buttons_per_page or list_len == buttons_per_page:
+    buttons_per_page = 5
+
+    if list_len <= buttons_per_page:
         for city in cities_list:
-           keyboard.append([InlineKeyboardButton(str(city), callback_data=str(city))])
-    elif list_len > buttons_per_page:
+            keyboard.append([InlineKeyboardButton(str(city), callback_data=str(city))])
+
+    else:
+        # compute first and last indexes
         last_index = page_num * buttons_per_page
         first_index = last_index - buttons_per_page
+
+        # extract the cities for the page
         page_list = cities_list[first_index:last_index]
+
+        # add cities
         for city in page_list:
             keyboard.append([InlineKeyboardButton(str(city), callback_data=str(city))])
-        keyboard.append([
-                        InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="page_back"),
-                        InlineKeyboardButton(f"{last_index}/{list_len}", callback_data="do_nothing"),
-                        InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="page_forward")
-                        ])
+
+        # add navigation footer
+        navigation_footer = [InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="page_back"),
+                             InlineKeyboardButton(f"{last_index}/{list_len}", callback_data="do_nothing"),
+                             InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="page_forward")]
+        keyboard.append(navigation_footer)
     return keyboard
 
 
@@ -79,6 +86,7 @@ def button_command(update, context):
     if str(query.data) == "page_back":
         if current_page <= 1:
             reply = f"Братан, ты и так на первой странице.{emojis.encode(':man_facepalming:')} Мда, ну ты даёшь."
+            reply += "\n" + personal_data.choose_city_string
         else:
             current_page -= 1
             reply = personal_data.choose_city_string
