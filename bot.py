@@ -1,5 +1,6 @@
 import logging
 import personal_data
+import text
 from mongodb import mongo_get_index, mongo_receive_cities
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackQueryHandler
@@ -48,16 +49,14 @@ def construct_cities_list(cities_list, page_num):
 def get_index(user_input, user_city):
     reply_string = ""
     if user_city == "":
-        reply_string = personal_data.city_has_not_been_chosen
+        reply_string = text.txt_city_empty
     else:
         our_indexes = mongo_get_index(user_input, user_city)
         if our_indexes == {}:
-            reply_string = personal_data.nothing_found_string
+            reply_string = text.txt_index_not_found
         else:
             global current_city
-            reply_string += personal_data.bingo + f"Город: {current_city}\n"
-            for count, (key, value) in enumerate(our_indexes.items(), 1):
-                reply_string += "\n<i>" + str(key) + "</i>: <b>" + str(value) + "</b>"
+            reply_string = text.design_indexes(our_indexes, current_city)
     return reply_string
 
 
@@ -65,14 +64,14 @@ def get_index(user_input, user_city):
 # "/start" handler
 def start_command(update, context):
     reply_markup = InlineKeyboardMarkup(construct_cities_list(mongo_receive_cities(), 1))
-    context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.start_string,
+    context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_start,
                              reply_markup=reply_markup)
 
 
 # "/city" handler
 def city_command(update, context):
     reply_markup = InlineKeyboardMarkup(construct_cities_list(mongo_receive_cities(), 1))
-    context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.choose_city_string,
+    context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_available_cities,
                              reply_markup=reply_markup)
 
 
@@ -84,24 +83,22 @@ def button_command(update, context):
     global current_page
     if str(query.data) == "page_back":
         if current_page <= 1:
-            reply = f"Братан, ты и так на первой странице.{emojis.encode(':man_facepalming:')} " \
-                    f"Мда, ну ты даёшь.{emojis.encode(':neutral_face:')}"
-            reply += "\n" + personal_data.choose_city_string
+            reply = text.txt_zero_page
         else:
             current_page -= 1
-            reply = personal_data.choose_city_string
+            reply = text.txt_available_cities
         reply_markup = InlineKeyboardMarkup(construct_cities_list(mongo_receive_cities(), current_page))
         query.edit_message_text(text=reply, reply_markup=reply_markup)
 
     elif str(query.data) == "page_forward":
         current_page += 1
         reply_markup = InlineKeyboardMarkup(construct_cities_list(mongo_receive_cities(), current_page))
-        query.edit_message_text(text=personal_data.choose_city_string, reply_markup=reply_markup)
+        query.edit_message_text(text=text.txt_available_cities, reply_markup=reply_markup)
 
     else:
         global current_city
         current_city = str(query.data)
-        query.edit_message_text(text=personal_data.city_is_chosen)
+        query.edit_message_text(text=text.txt_city_found)
 
 
 # text_handler
@@ -111,24 +108,23 @@ def index_command(update, context):
     global current_city
     user_city = str(current_city)
     reply_string = get_index(user_input, user_city)
-    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_string, parse_mode=ParseMode.HTML)
+    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_string,
+                             parse_mode=ParseMode.HTML)
 
 
 # "/help" handler
 # Is a requirement of Telegram API
 def help_command(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.help_string,
+    context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_help,
                              parse_mode=ParseMode.HTML)
 
 
 # "/find_city <user input>" handler
-# TODO: Create search by city
 def find_city_command(update, context):
     cities = mongo_receive_cities()
     if not context.args:
-        text_reply = f'Не, кореш, ты не прошарил. Твоя команда должна выглядеть /find_city <i>твой запрос</i>.' \
-                     f' Например, найти Киев\n /find_city Киев \nТеперь прошарил?'
-        context.bot.send_message(chat_id=update.effective_chat.id, text=text_reply, parse_mode=ParseMode.HTML)
+        context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_no_input,
+                                 parse_mode=ParseMode.HTML)
     else:
         _input = ''
         for word in context.args:
@@ -138,12 +134,12 @@ def find_city_command(update, context):
             if _input.upper() in city.upper():
                 reply_list.append(city)
         if not reply_list:
-            text_reply = f'Не, по такому запросу голяк. Посмотреть все города /city.'
-            context.bot.send_message(chat_id=update.effective_chat.id, text=text_reply, parse_mode=ParseMode.HTML)
+            context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_no_reply,
+                                     parse_mode=ParseMode.HTML)
         else:
             keyboard_reply = InlineKeyboardMarkup(construct_cities_list(reply_list, 1))
-            text_reply = f"Вот, всё что накопал. {emojis.encode(':frowning:')} Только давай в темпе вальса."
-            context.bot.send_message(chat_id=update.effective_chat.id, text=text_reply, reply_markup=keyboard_reply)
+            context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_cities_received,
+                                     reply_markup=keyboard_reply)
 
 
 # ==== MAIN METHOD ====
