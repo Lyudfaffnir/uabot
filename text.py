@@ -15,7 +15,7 @@ txt_available_cities = f"Сейчас доступны индексы для с�
 
 # button command
 txt_zero_page = f"Братан, ты и так на первой странице.{emojis.encode(':man_facepalming:')} " \
-             f"Мда, ну ты даёшь.{emojis.encode(':neutral_face:')}\n" + _available_cities
+             f"Мда, ну ты даёшь.{emojis.encode(':neutral_face:')}\n" + txt_available_cities
 txt_no_reply = f'Не, по такому запросу голяк. Посмотреть все города /city.'
 txt_cities_received = f"Вот, всё что накопал. {emojis.encode(':frowning:')} Только давай в темпе вальса."
 
