@@ -9,7 +9,7 @@ import emojis
 current_city = ""
 alphabet = "Cyrillic"
 page = 1
-
+message_id = ""
 # Basic logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,20 +24,22 @@ def construct_cities_list():
     # test list
     cities_list = ["London", "Kyiv", "Astana", "Lugansk", "ZP", "Kharkiv", "Donetsk", "Rio", "LA", "NY", "Atlanta"]
     list_len = len(cities_list)
-    if list_len < 10 or list_len == 10:
+    buttons_per_page = 8
+    if list_len < buttons_per_page or list_len == buttons_per_page:
         for city in cities_list:
            keyboard.append([InlineKeyboardButton(str(city), callback_data=str(city))])
-    elif list_len > 10:
+    elif list_len > buttons_per_page:
         global page
-        last_index = page * 10
-        first_index = last_index - 10
+        last_index = page * buttons_per_page
+        first_index = last_index - buttons_per_page
         page_list = cities_list[first_index:last_index]
         for city in page_list:
             keyboard.append([InlineKeyboardButton(str(city), callback_data=str(city))])
-        prev_page_button = InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="page_back")
-        counter_button = InlineKeyboardButton(f"{last_index}/{list_len}", callback_data="do_nothing")
-        next_page_button = InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="page_forward")
-        keyboard.append([prev_page_button, counter_button, next_page_button])
+        keyboard.append([
+                        InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="page_back"),
+                        InlineKeyboardButton(f"{last_index}/{list_len}", callback_data="do_nothing"),
+                        InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="page_forward")
+                        ])
     return keyboard
 
 
@@ -67,7 +69,11 @@ def start_command(update, context):
 
 # "/city" handler
 def city_command(update, context):
+    global page
+    page = 1
     reply_markup = InlineKeyboardMarkup(construct_cities_list())
+    global message_id
+    message_id = update.message.message_id
     context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.choose_city_string,
                              reply_markup=reply_markup)
 
@@ -84,12 +90,17 @@ def button_command(update, context):
         else:
             page = page - 1
             reply_markup = InlineKeyboardMarkup(construct_cities_list())
+            global message_id
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=message_id)
+            message_id = ""
             context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.choose_city_string,
                                      reply_markup=reply_markup)
     elif str(query.data) == "page_forward":
         page += 1
         reply_markup = InlineKeyboardMarkup(construct_cities_list())
-        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+        global message_id
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=message_id)
+        message_id = ""
         context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.choose_city_string,
                                  reply_markup=reply_markup)
     else:
