@@ -7,9 +7,8 @@ import emojis
 
 # Global variables
 current_city = ""
-alphabet = "Cyrillic"
-page = 1
-message_id = ""
+current_page = 1
+
 # Basic logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,19 +17,16 @@ logger = logging.getLogger(__name__)
 # Interaction with Mongo Functions
 # TODO: Needs to be separated in the future
 # TODO: Should show no more than 10 cities and footer interaction
-def construct_cities_list():
+def construct_cities_list(page_num):
     cities_list = mongo_receive_cities()
     keyboard = []
-    # test list
-    cities_list = ["London", "Kyiv", "Astana", "Lugansk", "ZP", "Kharkiv", "Donetsk", "Rio", "LA", "NY", "Atlanta"]
     list_len = len(cities_list)
     buttons_per_page = 8
     if list_len < buttons_per_page or list_len == buttons_per_page:
         for city in cities_list:
            keyboard.append([InlineKeyboardButton(str(city), callback_data=str(city))])
     elif list_len > buttons_per_page:
-        global page
-        last_index = page * buttons_per_page
+        last_index = page_num * buttons_per_page
         first_index = last_index - buttons_per_page
         page_list = cities_list[first_index:last_index]
         for city in page_list:
@@ -62,18 +58,14 @@ def get_index(user_input, user_city):
 # ==== Command Handlers ====
 # "/start" handler
 def start_command(update, context):
-    reply_markup = InlineKeyboardMarkup(construct_cities_list())
+    reply_markup = InlineKeyboardMarkup(construct_cities_list(1))
     context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.start_string,
                              reply_markup=reply_markup)
 
 
 # "/city" handler
 def city_command(update, context):
-    global page
-    page = 1
-    reply_markup = InlineKeyboardMarkup(construct_cities_list())
-    global message_id
-    message_id = update.message.message_id
+    reply_markup = InlineKeyboardMarkup(construct_cities_list(1))
     context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.choose_city_string,
                              reply_markup=reply_markup)
 
@@ -83,26 +75,20 @@ def city_command(update, context):
 def button_command(update, context):
     query = update.callback_query
     query.answer()
-    global page
+    global current_page
     if str(query.data) == "page_back":
-        if page == 1:
-            pass
+        if current_page <= 1:
+            reply = f"Братан, ты и так на первой странице.{emojis.encode(':man_facepalming:')} Мда, ну ты даёшь."
         else:
-            page = page - 1
-            reply_markup = InlineKeyboardMarkup(construct_cities_list())
-            global message_id
-            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=message_id)
-            message_id = ""
-            context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.choose_city_string,
-                                     reply_markup=reply_markup)
+            current_page -= 1
+            reply = personal_data.choose_city_string
+        reply_markup = InlineKeyboardMarkup(construct_cities_list(current_page))
+        query.edit_message_text(text=reply, reply_markup=reply_markup)
+
     elif str(query.data) == "page_forward":
-        page += 1
-        reply_markup = InlineKeyboardMarkup(construct_cities_list())
-        global message_id
-        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=message_id)
-        message_id = ""
-        context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.choose_city_string,
-                                 reply_markup=reply_markup)
+        current_page += 1
+        reply_markup = InlineKeyboardMarkup(construct_cities_list(current_page))
+        query.edit_message_text(text=personal_data.choose_city_string, reply_markup=reply_markup)
     else:
         global current_city
         current_city = str(query.data)
