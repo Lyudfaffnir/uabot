@@ -55,7 +55,7 @@ def parse_kyiv_addresses():
 
 
 # ======== FIND INDEX BY ADDRESS IN DICTIONARY =====
-# This function is not used anymore. Was used previously, when the data is not on the MongoDB
+# This function is not used anymore. Was used previously, when the data was not on the MongoDB
 # and therefore each time as the user requested data it was parsed again. Was removed due to insecurity.
 def get_data_from_dictionary(dictionary, request):
     new_string = ""
