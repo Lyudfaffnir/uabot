@@ -31,11 +31,8 @@ def mongo_get_index(user_input, city):
 def mongo_receive_cities():
     db = mongo_get_db()
     city_cyrillic = db.index_data.distinct("city")
-    city_latina = db.index_data.distinct("city_latina")
-    dictionary = {}
-    iterator = 0
+    # city_latina = db.index_data.distinct("city_latina")
+    cities_list = []
     for i in city_cyrillic:
-        j = city_latina[iterator]
-        dictionary.update({i: j})
-        iterator += 1
-    return dictionary
+        cities_list.append(i)
+    return cities_list

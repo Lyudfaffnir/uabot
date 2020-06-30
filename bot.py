@@ -3,10 +3,12 @@ import personal_data
 from mongodb import mongo_get_index, mongo_receive_cities
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackQueryHandler
+import emojis
 
 # Global variables
 current_city = ""
 alphabet = "Cyrillic"
+page = 1
 
 # Basic logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -19,9 +21,23 @@ logger = logging.getLogger(__name__)
 def construct_cities_list():
     cities_list = mongo_receive_cities()
     keyboard = []
-    for count, (key, value) in enumerate(cities_list.items(), 1):
-        if alphabet == 'Cyrillic':
-            keyboard.append([InlineKeyboardButton(str(key), callback_data=str(key))])
+    # test list
+    cities_list = ["London", "Kyiv", "Astana", "Lugansk", "ZP", "Kharkiv", "Donetsk", "Rio", "LA", "NY", "Atlanta"]
+    list_len = len(cities_list)
+    if list_len < 10 or list_len == 10:
+        for city in cities_list:
+           keyboard.append([InlineKeyboardButton(str(city), callback_data=str(city))])
+    elif list_len > 10:
+        global page
+        last_index = page * 10
+        first_index = last_index - 10
+        page_list = cities_list[first_index:last_index]
+        for city in page_list:
+            keyboard.append([InlineKeyboardButton(str(city), callback_data=str(city))])
+        prev_page_button = InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="page_back")
+        counter_button = InlineKeyboardButton(f"{last_index}/{list_len}", callback_data="do_nothing")
+        next_page_button = InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="page_forward")
+        keyboard.append([prev_page_button, counter_button, next_page_button])
     return keyboard
 
 
@@ -61,9 +77,25 @@ def city_command(update, context):
 def button_command(update, context):
     query = update.callback_query
     query.answer()
-    global current_city
-    current_city = str(query.data)
-    query.edit_message_text(text=personal_data.city_is_chosen)
+    global page
+    if str(query.data) == "page_back":
+        if page == 1:
+            pass
+        else:
+            page = page - 1
+            reply_markup = InlineKeyboardMarkup(construct_cities_list())
+            context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.choose_city_string,
+                                     reply_markup=reply_markup)
+    elif str(query.data) == "page_forward":
+        page += 1
+        reply_markup = InlineKeyboardMarkup(construct_cities_list())
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+        context.bot.send_message(chat_id=update.effective_chat.id, text=personal_data.choose_city_string,
+                                 reply_markup=reply_markup)
+    else:
+        global current_city
+        current_city = str(query.data)
+        query.edit_message_text(text=personal_data.city_is_chosen)
 
 
 # text_handler
