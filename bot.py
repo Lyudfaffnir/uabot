@@ -1,14 +1,23 @@
 import logging
-import personal_data
 import text
+import json
 from mongodb import mongo_get_index, mongo_receive_cities
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackQueryHandler
 import emojis
 
+
 # Global variables
 current_city = ""
 current_page = 1
+
+
+def get_token():
+    with open("config.json", "r") as config:
+        config = json.loads(config.read())
+        token = str(config['token'])
+        return token
+
 
 # Basic logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -21,7 +30,6 @@ def construct_cities_list(cities_list, page_num):
     keyboard = []
     list_len = len(cities_list)
     buttons_per_page = 5
-
     if list_len <= buttons_per_page:
         for city in cities_list:
             keyboard.append([InlineKeyboardButton(str(city), callback_data=str(city))])
@@ -46,17 +54,44 @@ def construct_cities_list(cities_list, page_num):
     return keyboard
 
 
+def design_indexes(index_dict, city, *page_number):
+    print("===============================")
+    this_page = int(page_number[0])
+    txt_indexes = ''
+    try:
+    #    if this_page >= 0:
+            addresses = list(index_dict.keys())
+            indexes = list(index_dict.values())
+            txt_indexes += text.txt_bingo + f"Город: {city}\n"
+            for x in range(this_page*10, this_page+10):
+                txt_indexes += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
+    #    else:
+    #
+    #        for count, (key, value) in enumerate(index_dict.items(), 1):
+    #            txt_indexes += f"\n<i>{str(key)}</i>: <b>{str(value)}</b>"
+
+    except TypeError:
+        txt_indexes = text.txt_error
+
+    finally:
+        return txt_indexes
+
 def get_index(user_input, user_city):
-    reply_string = ""
     if user_city == "":
         reply_string = text.txt_city_empty
     else:
         our_indexes = mongo_get_index(user_input, user_city)
-        if our_indexes == {}:
+        global current_city
+
+        if not our_indexes:
             reply_string = text.txt_index_not_found
+
         else:
-            global current_city
-            reply_string = text.design_indexes(our_indexes, current_city)
+            reply_string = design_indexes(our_indexes, current_city, 0)
+            print(reply_string)
+
+        # else:
+        #    reply_string = design_indexes(our_indexes, current_city)
     return reply_string
 
 
@@ -122,31 +157,34 @@ def help_command(update, context):
 # "/find_city <user input>" handler
 def find_city_command(update, context):
     cities = mongo_receive_cities()
-    if not context.args:
-        context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_no_input,
-                                 parse_mode=ParseMode.HTML)
-    else:
-        _input = ''
-        for word in context.args:
-            _input += word
-        reply_list = []
-        for city in cities:
-            if _input.upper() in city.upper():
-                reply_list.append(city)
-        if not reply_list:
-            context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_no_reply,
+    try:
+        if not context.args:
+            context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_no_input,
                                      parse_mode=ParseMode.HTML)
+
         else:
-            keyboard_reply = InlineKeyboardMarkup(construct_cities_list(reply_list, 1))
-            context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_cities_received,
-                                     reply_markup=keyboard_reply)
+            _input = ''
+            for word in context.args:
+                _input += word
+            reply_list = []
+            for city in cities:
+                if _input.upper() in city.upper():
+                    reply_list.append(city)
+            if not reply_list:
+                context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_no_reply,
+                                         parse_mode=ParseMode.HTML)
+            else:
+                keyboard_reply = InlineKeyboardMarkup(construct_cities_list(reply_list, 1))
+                context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_cities_received,
+                                         reply_markup=keyboard_reply)
+    except TypeError:
+            context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_error)
 
 
-# ==== MAIN METHOD ====
 # Contains Command Handlers
 def main():
     # Create updater
-    updater = Updater(token=personal_data.token, use_context=True)
+    updater = Updater(token=get_token(), use_context=True)
     dispatcher = updater.dispatcher
     # "/start" command
     start_handler = CommandHandler('start', start_command)

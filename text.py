@@ -30,10 +30,7 @@ txt_index_not_found = f"Я не могу ничего найти по запро
                    f"названия улицы.\nВыбрать другой город - /city"
 txt_bingo = f"{emojis.encode(':clap:')} Вуалля!\n"
 
+txt_too_long = "Слишком длинная таблица, пока не будет отображаться. Уточните пожалуйста запрос"
 
-def design_indexes(index_dict, city):
-    txt_indexes = ''
-    txt_indexes += txt_bingo + f"Город: {city}\n"
-    for count, (key, value) in enumerate(index_dict.items(), 1):
-        txt_indexes += f"\n<i>{str(key)}</i>: <b>{str(value)}</b>"
-    return txt_indexes
+txt_error = "Произошла ошибка при обработке запроса."
+

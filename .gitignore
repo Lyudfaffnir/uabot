@@ -133,3 +133,4 @@ dmypy.json
 
 #My private data
 personal_data.py
+config.json

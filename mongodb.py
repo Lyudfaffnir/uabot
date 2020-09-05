@@ -1,10 +1,22 @@
-import personal_data
+import json
 from pymongo import MongoClient
+
+def get_login():
+    with open("config.json", "r") as config:
+        config = json.loads(config.read())
+        login = str(config['mongo_login'])
+        return login
+
+def get_password():
+    with open("config.json", "r") as config:
+        config = json.loads(config.read())
+        password = str(config['mongo_pass'])
+        return password
 
 
 # Basic MongoDB access
 def mongo_get_db():
-    connection_string = "mongodb+srv://" + str(personal_data.get_login()) + ":" + str(personal_data.get_password()) +\
+    connection_string = "mongodb+srv://" + get_login() + ":" + get_password() +\
                         "@petprojectsx-c0xb2.mongodb.net/<dbname>?retryWrites=true&w=majority"
     client = MongoClient(connection_string)
     db = client.uabot
