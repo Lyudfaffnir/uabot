@@ -6,11 +6,13 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackQueryHandler
 import emojis
 
-
+# TODO: Default_city = Киев
 # Global variables
-current_city = ""
-current_page = 1
+_cached_city = ""
+_cached_city_page = 1
 
+_cached_index_page = 0
+_cached_index_dict = {}
 
 def get_token():
     with open("config.json", "r") as config:
@@ -54,46 +56,30 @@ def construct_cities_list(cities_list, page_num):
     return keyboard
 
 
-def design_indexes(index_dict, city, *page_number):
-    print("===============================")
-    this_page = int(page_number[0])
-    txt_indexes = ''
-    try:
-    #    if this_page >= 0:
-            addresses = list(index_dict.keys())
-            indexes = list(index_dict.values())
-            txt_indexes += text.txt_bingo + f"Город: {city}\n"
-            for x in range(this_page*10, this_page+10):
-                txt_indexes += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
-    #    else:
-    #
-    #        for count, (key, value) in enumerate(index_dict.items(), 1):
-    #            txt_indexes += f"\n<i>{str(key)}</i>: <b>{str(value)}</b>"
-
-    except TypeError:
-        txt_indexes = text.txt_error
-
-    finally:
-        return txt_indexes
-
 def get_index(user_input, user_city):
     if user_city == "":
-        reply_string = text.txt_city_empty
+        reply = text.txt_city_empty
     else:
+        global _cached_index_dict
         our_indexes = mongo_get_index(user_input, user_city)
-        global current_city
+        _cached_index_dict = our_indexes
+        global _cached_city
 
         if not our_indexes:
-            reply_string = text.txt_index_not_found
+            reply = text.txt_index_not_found
 
         else:
-            reply_string = design_indexes(our_indexes, current_city, 0)
-            print(reply_string)
-
-        # else:
-        #    reply_string = design_indexes(our_indexes, current_city)
-    return reply_string
-
+            this_page = int(0)
+            try:
+                addresses = list(_cached_index_dict.keys())
+                indexes = list(_cached_index_dict.values())
+                reply = ''
+                reply += text.txt_bingo + f"Город: {user_city}\n"
+                for x in range(this_page * 10, this_page + 10):
+                    reply += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
+            except TypeError:
+                reply = text.txt_error
+    return reply
 
 # ==== Command Handlers ====
 # "/start" handler
@@ -112,27 +98,27 @@ def city_command(update, context):
 
 # inline query handler
 # By default chooses the city
-def button_command(update, context):
+def inline_query_handler(update, context):
     query = update.callback_query
     query.answer()
-    global current_page
+    global _cached_city_page
     if str(query.data) == "page_back":
-        if current_page <= 1:
+        if _cached_city_page <= 1:
             reply = text.txt_zero_page
         else:
-            current_page -= 1
+            _cached_city_page -= 1
             reply = text.txt_available_cities
-        reply_markup = InlineKeyboardMarkup(construct_cities_list(mongo_receive_cities(), current_page))
+        reply_markup = InlineKeyboardMarkup(construct_cities_list(mongo_receive_cities(), _cached_city_page))
         query.edit_message_text(text=reply, reply_markup=reply_markup)
 
     elif str(query.data) == "page_forward":
-        current_page += 1
-        reply_markup = InlineKeyboardMarkup(construct_cities_list(mongo_receive_cities(), current_page))
+        _cached_city_page += 1
+        reply_markup = InlineKeyboardMarkup(construct_cities_list(mongo_receive_cities(), _cached_city_page))
         query.edit_message_text(text=text.txt_available_cities, reply_markup=reply_markup)
 
     else:
-        global current_city
-        current_city = str(query.data)
+        global _cached_city
+        _cached_city = str(query.data)
         query.edit_message_text(text=text.txt_city_found)
 
 
@@ -140,8 +126,8 @@ def button_command(update, context):
 # By default needs to search for index by user input
 def index_command(update, context):
     user_input = str(update.message.text)
-    global current_city
-    user_city = str(current_city)
+    global _cached_city
+    user_city = str(_cached_city)
     reply_string = get_index(user_input, user_city)
     context.bot.send_message(chat_id=update.effective_chat.id, text=reply_string,
                              parse_mode=ParseMode.HTML)
@@ -193,7 +179,7 @@ def main():
     choose_city_handler = CommandHandler('city', city_command)
     dispatcher.add_handler(choose_city_handler)
     # Here we receive the response from the inline query
-    dispatcher.add_handler(CallbackQueryHandler(button_command))
+    dispatcher.add_handler(CallbackQueryHandler(inline_query_handler))
     # "/help" command
     dispatcher.add_handler(CommandHandler('help', help_command))
     # How we handle each other text received
