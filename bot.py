@@ -5,10 +5,11 @@ from mongodb import mongo_get_index, mongo_receive_cities
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackQueryHandler
 import emojis
+import math
 
 # TODO: Default_city = Киев
 # Global variables
-_cached_city = ""
+_cached_city = "Киев"
 _cached_city_page = 1
 
 _cached_index_page = 0
@@ -49,37 +50,11 @@ def construct_cities_list(cities_list, page_num):
             keyboard.append([InlineKeyboardButton(str(city), callback_data=str(city))])
 
         # add navigation footer
-        navigation_footer = [InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="page_back"),
+        navigation_footer = [InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="city_list_back"),
                              InlineKeyboardButton(f"{last_index}/{list_len}", callback_data="do_nothing"),
-                             InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="page_forward")]
+                             InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="city_list_forward")]
         keyboard.append(navigation_footer)
     return keyboard
-
-
-def get_index(user_input, user_city):
-    if user_city == "":
-        reply = text.txt_city_empty
-    else:
-        global _cached_index_dict
-        our_indexes = mongo_get_index(user_input, user_city)
-        _cached_index_dict = our_indexes
-        global _cached_city
-
-        if not our_indexes:
-            reply = text.txt_index_not_found
-
-        else:
-            this_page = int(0)
-            try:
-                addresses = list(_cached_index_dict.keys())
-                indexes = list(_cached_index_dict.values())
-                reply = ''
-                reply += text.txt_bingo + f"Город: {user_city}\n"
-                for x in range(this_page * 10, this_page + 10):
-                    reply += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
-            except TypeError:
-                reply = text.txt_error
-    return reply
 
 # ==== Command Handlers ====
 # "/start" handler
@@ -98,11 +73,15 @@ def city_command(update, context):
 
 # inline query handler
 # By default chooses the city
+# Eventually I decided to use it more than once :)
 def inline_query_handler(update, context):
     query = update.callback_query
     query.answer()
     global _cached_city_page
-    if str(query.data) == "page_back":
+    global _cached_index_page
+    total_pages = int(len(_cached_index_dict) / 10)
+
+    if str(query.data) == "city_list_back":
         if _cached_city_page <= 1:
             reply = text.txt_zero_page
         else:
@@ -111,15 +90,68 @@ def inline_query_handler(update, context):
         reply_markup = InlineKeyboardMarkup(construct_cities_list(mongo_receive_cities(), _cached_city_page))
         query.edit_message_text(text=reply, reply_markup=reply_markup)
 
-    elif str(query.data) == "page_forward":
+    elif str(query.data) == "city_list_forward":
         _cached_city_page += 1
         reply_markup = InlineKeyboardMarkup(construct_cities_list(mongo_receive_cities(), _cached_city_page))
         query.edit_message_text(text=text.txt_available_cities, reply_markup=reply_markup)
 
-    else:
+    elif str(query.data) == "index_list_back":
+        if _cached_index_page > 1 and _cached_city_page <= total_pages:
+            _cached_index_page -= 1
+            list_from = int(_cached_index_page) * 10 - 1
+            list_until = list_from + 10
+
+            addresses = list(_cached_index_dict.keys())[list_from:list_until]
+            indexes = list(_cached_index_dict.values())[list_from:list_until]
+
+            if _cached_index_page == total_pages:
+                x = 10 - total_pages % 10
+                addresses = list(_cached_index_dict.keys())[:x]
+                indexes = list(_cached_index_dict.values())[:x]
+
+            keyboard = [[InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="index_list_back"),
+                         InlineKeyboardButton(f"{_cached_index_page}/{total_pages}", callback_data="do_nothing"),
+                         InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="index_list_forward")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            reply = ''
+            for x in range(0, len(addresses)):
+                reply += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
+
+            query.edit_message_text(text=reply, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+
+
+    elif str(query.data) == "index_list_forward":
+
+        if _cached_index_page < total_pages:
+            _cached_index_page += 1
+            list_from = int(_cached_index_page) * 10 - 1
+            list_until = list_from + 10
+            addresses = list(_cached_index_dict.keys())[list_from:list_until]
+            indexes = list(_cached_index_dict.values())[list_from:list_until]
+
+            if _cached_index_page == total_pages:
+                x = 10 - total_pages%10
+                addresses = list(_cached_index_dict.keys())[:x]
+                indexes = list(_cached_index_dict.values())[:x]
+
+            keyboard = [[InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="index_list_back"),
+                         InlineKeyboardButton(f"{_cached_index_page}/{total_pages}", callback_data="do_nothing"),
+                         InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="index_list_forward")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            reply = ''
+            for x in range(0, len(addresses)):
+                reply += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
+            query.edit_message_text(text=reply, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+
+    elif str(query.data) == "do_nothing":
+            pass
+
+    elif str(query.data) in mongo_receive_cities():
         global _cached_city
         _cached_city = str(query.data)
         query.edit_message_text(text=text.txt_city_found)
+    else:
+        query.edit_message_text(text=text.txt_error)
 
 
 # text_handler
@@ -127,11 +159,41 @@ def inline_query_handler(update, context):
 def index_command(update, context):
     user_input = str(update.message.text)
     global _cached_city
-    user_city = str(_cached_city)
-    reply_string = get_index(user_input, user_city)
-    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_string,
-                             parse_mode=ParseMode.HTML)
+    global _cached_index_dict
+    _cached_index_dict = mongo_get_index(user_input, _cached_city)
+    if not _cached_index_dict:
+        reply = text.txt_index_not_found
 
+    else:
+        try:
+            addresses = list(_cached_index_dict.keys())
+            indexes = list(_cached_index_dict.values())
+            reply = ''
+            reply += text.txt_bingo + f"Город: {_cached_city}\n"
+            if len(addresses) < 10:
+                for x in range(0, len(addresses)):
+                    reply += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
+            else:
+                for x in range(0, 10):
+                    reply += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
+        except TypeError:
+            reply = text.txt_error
+    # := this operator is from new version of python
+    # I know python enough to use its state-of-art features
+    print("Dictionary length: " + str(index_dict_length := len(_cached_index_dict)))
+    if index_dict_length > 10:
+        total_pages = int(index_dict_length / 10)
+        keyboard = [[InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="index_list_back"),
+                     InlineKeyboardButton(f"1/{total_pages}", callback_data="do_nothing"),
+                     InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="index_list_forward")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        context.bot.send_message(chat_id=update.effective_chat.id, text=reply,
+                                 parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+
+
+    else:
+        context.bot.send_message(chat_id=update.effective_chat.id, text=reply,
+                                 parse_mode=ParseMode.HTML)
 
 # "/help" handler
 # Is a requirement of Telegram API
