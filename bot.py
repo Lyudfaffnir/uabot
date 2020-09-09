@@ -190,7 +190,7 @@ def index_command(update, context):
             reply = text.txt_error
     # := this operator is from new version of python
     # I know python enough to use its state-of-art features
-    print("Dictionary length: " + str(index_dict_length := len(_cached_index_dict)))
+    index_dict_length = len(_cached_index_dict)
     if index_dict_length > 10:
         total_pages = int(index_dict_length / 10)
         keyboard = [[InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="index_list_back"),
