@@ -79,6 +79,7 @@ def inline_query_handler(update, context):
     query.answer()
     global _cached_city_page
     global _cached_index_page
+    global _cached_city
     total_pages = int(len(_cached_index_dict) / 10)
 
     if str(query.data) == "city_list_back":
@@ -152,7 +153,6 @@ def inline_query_handler(update, context):
             pass
 
     elif str(query.data) in mongo_receive_cities():
-        global _cached_city
         _cached_city = str(query.data)
         query.edit_message_text(text=text.txt_city_found)
     else:
