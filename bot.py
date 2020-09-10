@@ -7,12 +7,11 @@ from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, Callb
 import emojis
 import math
 
-# TODO: Default_city = Киев
 # Global variables
 _cached_city = "Киев"
 _cached_city_page = 1
 
-_cached_index_page = 0
+_cached_index_page = 1
 _cached_index_dict = {}
 
 def get_token():
@@ -80,8 +79,9 @@ def inline_query_handler(update, context):
     global _cached_city_page
     global _cached_index_page
     global _cached_city
-    total_pages = int(len(_cached_index_dict) / 10)
-
+    total_pages = math.ceil(len(_cached_index_dict) / 10)
+    addresses = list(_cached_index_dict.keys())
+    indexes = list(_cached_index_dict.values())
     if str(query.data) == "city_list_back":
         if _cached_city_page <= 1:
             reply = text.txt_zero_page
@@ -97,57 +97,33 @@ def inline_query_handler(update, context):
         query.edit_message_text(text=text.txt_available_cities, reply_markup=reply_markup)
 
     elif str(query.data) == "index_list_back":
-        print(_cached_index_page)
-        if _cached_index_page > 1 and _cached_city_page <= total_pages:
-            _cached_index_page -= 1
+        print("Index Page: " + str(_cached_index_page))
+        print("Total Pages: " + str(total_pages))
+        if _cached_index_page > 1 :
+            _cached_index_page = _cached_index_page - 1
             list_from = int(_cached_index_page) * 10 - 1
             list_until = list_from + 10
+            addresses = addresses[list_from:list_until]
+            indexes = indexes[list_from:list_until]
 
-            addresses = list(_cached_index_dict.keys())[list_from:list_until]
-            indexes = list(_cached_index_dict.values())[list_from:list_until]
+            reply_markup = construct_markup_index_list(_cached_index_page, total_pages)
+            reply = construct_indexes_list(_cached_city, addresses, indexes)
 
-            if _cached_index_page == total_pages:
-                x = 10 - total_pages % 10
-                addresses = list(_cached_index_dict.keys())[:x]
-                indexes = list(_cached_index_dict.values())[:x]
-
-            keyboard = [[InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="index_list_back"),
-                         InlineKeyboardButton(f"{_cached_index_page}/{total_pages}", callback_data="do_nothing"),
-                         InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="index_list_forward")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            reply = f'Город {_cached_city}.\n================== ༚┈❁┈*ﾟ♬:*( ͡≖ ل͜ ͡≖)*ﾟ♬:*┈❁┈༚ ==================='
-            for x in range(0, len(addresses)):
-                reply += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
-            reply += '\n\n================== ༚┈❁┈*ﾟ♬:*( ͡≖ ل͜ ͡≖)*ﾟ♬:*┈❁┈༚ ==================='
             query.edit_message_text(text=reply, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
 
-
     elif str(query.data) == "index_list_forward":
-        print(_cached_index_page)
-        if _cached_index_page < total_pages:
-            print(_cached_index_page)
+        print("Index Page: " + str(_cached_index_page))
+        print("Total Pages: " + str(total_pages))
+        if _cached_index_page <= total_pages - 1:
             _cached_index_page += 1
-            print(_cached_index_page)
-            list_from = int(_cached_index_page) * 10 - 1
+            list_from = int(_cached_index_page-1) * 10
             list_until = list_from + 10
-            addresses = list(_cached_index_dict.keys())[list_from:list_until]
-            indexes = list(_cached_index_dict.values())[list_from:list_until]
+            addresses = addresses[list_from:list_until]
+            indexes = indexes[list_from:list_until]
 
-        elif _cached_index_page == total_pages:
-            x = 10 - total_pages%10
-            addresses = list(_cached_index_dict.keys())[:x]
-            indexes = list(_cached_index_dict.values())[:x]
-
-
-        keyboard = [[InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="index_list_back"),
-                         InlineKeyboardButton(f"{_cached_index_page + 1}/{total_pages}", callback_data="do_nothing"),
-                         InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="index_list_forward")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        reply = f'Город {_cached_city}.\n================== ༚┈❁┈*ﾟ♬:*( ͡≖ ل͜ ͡≖)*ﾟ♬:*┈❁┈༚ ==================='
-        for x in range(0, len(addresses)):
-            reply += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
-        reply += '\n\n================== ༚┈❁┈*ﾟ♬:*( ͡≖ ل͜ ͡≖)*ﾟ♬:*┈❁┈༚ ==================='
-        query.edit_message_text(text=reply, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+            reply_markup = construct_markup_index_list(_cached_index_page, total_pages)
+            reply = construct_indexes_list(_cached_city, addresses, indexes)
+            query.edit_message_text(text=reply, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
 
     elif str(query.data) == "do_nothing":
             pass
@@ -159,51 +135,49 @@ def inline_query_handler(update, context):
         query.edit_message_text(text=text.txt_error)
 
 
+def construct_indexes_list(_cached_city, addresses, indexes):
+    reply = f'Город:  <b>{_cached_city}</b>\n'
+    for x in range(0, len(addresses)):
+        reply += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
+    return reply
+
+
+def construct_markup_index_list(_cached_index_page, total_pages):
+    keyboard = [[InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="index_list_back"),
+                 InlineKeyboardButton(f"{_cached_index_page}/{total_pages}", callback_data="do_nothing"),
+                 InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="index_list_forward")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    return reply_markup
+
+
 # text_handler
 # By default needs to search for index by user input
 def index_command(update, context):
-
     user_input = str(update.message.text)
     global _cached_city
     global _cached_index_dict
     global _cached_index_page
-    _cached_index_page = 0
+    _cached_index_page = 1
     _cached_index_dict = mongo_get_index(user_input, _cached_city)
-    if not _cached_index_dict:
-        reply = text.txt_index_not_found
-
+    total_pages = math.ceil(len(_cached_index_dict) / 10)
+    addresses = list(_cached_index_dict.keys())
+    indexes = list(_cached_index_dict.values())
+    print("Index Page: " + str(_cached_index_page))
+    print("Total Pages: " + str(total_pages))
+    if len(addresses) <= 10:
+        reply = text.txt_bingo +  construct_indexes_list(_cached_city, addresses, indexes)
+        context.bot.send_message(chat_id=update.effective_chat.id, text=reply, parse_mode=ParseMode.HTML)
     else:
-        try:
-            addresses = list(_cached_index_dict.keys())
-            indexes = list(_cached_index_dict.values())
-            reply = ''
-            reply += text.txt_bingo + f"Город: {_cached_city}\n"
-            if len(addresses) < 10:
-                reply += '\n================== ༚┈❁┈*ﾟ♬:*( ͡≖ ل͜ ͡≖)*ﾟ♬:*┈❁┈༚ ==================='
-                for x in range(0, len(addresses)):
-                    reply += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
-            else:
-                for x in range(0, 10):
-                    reply += f"\n<i>{str(addresses[x])}</i>: <b>{str(indexes[x])}</b>"
-                reply += '\n\n================== ༚┈❁┈*ﾟ♬:*( ͡≖ ل͜ ͡≖)*ﾟ♬:*┈❁┈༚ ==================='
-        except TypeError:
-            reply = text.txt_error
-    # := this operator is from new version of python
-    # I know python enough to use its state-of-art features
-    index_dict_length = len(_cached_index_dict)
-    if index_dict_length > 10:
-        total_pages = int(index_dict_length / 10)
-        keyboard = [[InlineKeyboardButton(emojis.encode(":arrow_left:"), callback_data="index_list_back"),
-                     InlineKeyboardButton(f"{_cached_index_page + 1}/{total_pages}", callback_data="do_nothing"),
-                     InlineKeyboardButton(emojis.encode(":arrow_right:"), callback_data="index_list_forward")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        addresses = addresses[0:10]
+        indexes = indexes[0:10]
+        reply = construct_indexes_list(_cached_city, addresses, indexes)
+
+
+        reply_markup = construct_markup_index_list(_cached_index_page, total_pages)
+
+        context.bot.send_message(chat_id=update.effective_chat.id, text=text.txt_bingo)
         context.bot.send_message(chat_id=update.effective_chat.id, text=reply,
                                  parse_mode=ParseMode.HTML, reply_markup=reply_markup)
-
-
-    else:
-        context.bot.send_message(chat_id=update.effective_chat.id, text=reply,
-                                 parse_mode=ParseMode.HTML)
 
 # "/help" handler
 # Is a requirement of Telegram API
